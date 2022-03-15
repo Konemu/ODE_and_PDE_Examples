@@ -63,19 +63,7 @@ for i = 2:n
     x_Euler(i) = x_Euler(i-1) + h*v_Euler(i);
 end
 
-% Plot Euler
-%plot(t, x_Euler)
-%hold on;
 t_exakt = linspace(t_0, t_max, 1000);
-%plot(t_exakt, x_exakt(t_exakt));
-%plot(t, v_Euler)
-%hold off;
-%legend('Euler', 'Exakt')
-%title({'Numerische L\"osung von $\ddot{x} = -2d\dot{x} - \omega_0^2 x$ mit dem','Euler-Verfahren und $x(0) = 1$, $\dot{x}(0) = 0$, $dt = 0.5$'},"Interpreter","latex","FontSize",14)
-%xlabel('$t$',"Interpreter","latex","FontSize",16)
-%ylabel('$x(t)$',"Interpreter","latex","FontSize",16)
-%legend('Euler', 'Exakt',"Interpreter","latex","Location","Northeast")
-
 
 % Runge-Kutta:
 for i = 2:n
@@ -108,7 +96,7 @@ clear;
 % Numerische Betrachtung der Strahlungsbilanz einer dünnen
 % Atmosphärenschicht
 % init: Konstanten
-h   = 8300;              % Dicke der Troposphäre (m)
+h   = 8300;             % Dicke der Troposphäre (m)
 rho = 1.2;              % Dichte der Troposphäre (kg m^-3)
 C   = 1000;             % Massenspez. Wärmekapazität (J kg^-1 K^-1)
 a   = 0.3;              % Albedo
@@ -119,8 +107,8 @@ s   = 5.67e-8;          % Stefan-Boltzmann-Konstante (W m^-2 K^-4)
 % init: Diskretisierung
 t_0 = 0;
 t_max = 365;                    % 365 Tage (d)
-dt = 35 ;                        % dt = 1 Tag (d)
-n = round( (t_max - t_0)/dt );
+dt = [20 35 40] ;               % dt (d)
+n = round( (t_max - t_0)./dt );
 T_0 = 300;                      % Anfangsbedingung T(t_0) = T_0 = 300 K
 
 % Gleichgewichtstemperatur:
@@ -130,33 +118,49 @@ T_equilibrium = ((1-a)*I/(4*e*s))^(1/4)
 f = @(t, T) 1/(4*h*rho*C) * ( (1-a)*I - 4 * e * s * T^4 ) * 86400;
 
 
-t = linspace(t_0, t_max, n);
-T = zeros(1, n);
-T(1) = T_0;
-
-for i = 2:n
-    T_curr = T(i-1);
-    k1 = f(i*dt, T_curr);
-    k2 = f(i*dt + dt/2, T_curr + dt/2*k1);
-    k3 = f(i*dt + dt/2, T_curr + dt/2*k2);
-    k4 = f(i*dt + dt, T_curr + dt*k3);
+for j = 1:length(n)
+    t = linspace(t_0, t_max, n(j));
+    T = zeros(1, n(j));
+    T(1) = T_0;
     
-    T(i) = T_curr + dt/6 * ( k1 + 2*k2 + 2*k3 + k4 );    
+    for i = 2:n(j)
+        T_curr = T(i-1);
+        k1 = f(i*dt(j), T_curr);
+        k2 = f(i*dt(j) + dt(j)/2, T_curr + dt(j)/2*k1);
+        k3 = f(i*dt(j) + dt(j)/2, T_curr + dt(j)/2*k2);
+        k4 = f(i*dt(j) + dt(j), T_curr + dt(j)*k3);
+        
+        T(i) = T_curr + dt(j)/6 * ( k1 + 2*k2 + 2*k3 + k4 );    
+    end
+    plot(t, T);
+    hold on;
 end
+
+for j = 1:1
+    t = linspace(t_0, t_max, n(j));
+    T = zeros(1, n(j));
+    T(1) = T_0;
+    
+    for i = 2:n(j)
+        T(i) = T_curr + dt(j) * f(i*dt, T(i-1));    
+    end
+    plot(t, T);
+    hold on;
+end
+
 
 % Analytische Näherung
 tau = (h*rho*C)/(4*e*s*T_equilibrium^3) / 86400;
 T_analytical = T_equilibrium + (T_0 - T_equilibrium) * exp(-linspace(t_0, t_max, 365)/tau);
 
-clf;
-plot(t, T);
-hold on;
+
 plot(linspace(t_0, t_max, 365), T_analytical);
 hold off;
-legend('RK, $dt = 35$ d', 'analytische N\"aherung', 'interpreter', 'latex')
+legend('RK, $dt = 20$ d', 'RK, $dt = 35$ d', 'RK, $dt = 50$ d','Euler, $dt = 20$ d', 'analytische N\"aherung', 'interpreter', 'latex')
 xlabel('Zeit $t$ (d)', "Interpreter","latex", "FontSize",14)
 ylabel('Temperatur $T$ (K)', "Interpreter","latex", "FontSize",14)
 title('Numerische L\"osung der Strahlungsbilanzgleichung', "Interpreter","latex")
+axis([0 365 285 300])
 
 %%
 function [xVec, solVec] = fwdEuler(f, n, h, y_0, x_0, x_max) 
